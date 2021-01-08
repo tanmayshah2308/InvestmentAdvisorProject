@@ -21,7 +21,7 @@ if ac_bid < 35 and data["Air Canada"] == "False":
 # Now, we need to change the json file so that all the stocks in
 # stocks_to_be_notified are "True", since we are sending the email.
 if stocks_to_be_notified:
-    with open("scratch.json", "w") as json_file:
+    with open("data.json", "w") as json_file:
         for stock_name in stocks_to_be_notified:
             data[stock_name] = "True"
             json.dump(data, json_file)
