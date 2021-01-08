@@ -11,12 +11,25 @@ stocks_to_be_notified = {}
 with open("data.json") as json_file:
     data = json.load(json_file)
 
-# Stocks Being Watched: Air Canada
+# Stocks Being Watched: Air Canada, Canadian Tire, Suncor
 # 1) Air Canada
 ac = yf.Ticker("AC.TO")
 ac_bid = ac.info['bid']
 if ac_bid < 35 and data["Air Canada"] == "False":
     stocks_to_be_notified["Air Canada"] = ac_bid
+
+# 2) Canadian Tire
+ct = yf.Ticker("CTC-A.TO")
+ct_bid = ct.info['bid']
+if ct_bid < 150 and data["Canadian Tire"] == "False":
+    stocks_to_be_notified["Canadian Tire"] = ct_bid
+
+# 3) Suncor
+sc = yf.Ticker("SU.TO")
+sc_bid = sc.info["bid"]
+if sc_bid < 19 and data["Suncor"] == "False":
+    stocks_to_be_notified["Suncor"] = sc_bid
+
 
 # Now, we need to change the json file so that all the stocks in
 # stocks_to_be_notified are "True", since we are sending the email.
