@@ -1,10 +1,11 @@
 import yfinance as yf
+import math
 
 list_of_stocks = ['AC.TO', 'CTC-A.TO', 'SU.TO']
 all_SMA = {}
 all_EMA = {}
 all_WMA = {}
-
+all_BBone = {}
 
 for stock_name in list_of_stocks:
     stock = yf.Ticker(stock_name)
@@ -139,6 +140,43 @@ for stock_name in list_of_stocks:
 
     all_WMA[stock_name] = ['instances evaluated: ' + str(length), 'success rate: ' +
                            str(round(successes_WMA / (successes_WMA + failures_WMA) * 100, 2)) + '%']
+
+
+    # Using Bollinger Bands Strategy 1: Buy when price dips below support, sell when it hits the SMA again.
+    # Downside: this strategy doesn't factor in trends (we could continually buy in downtrends)
+
+    curr_long_BBone, buy_price_BBone, sell_price_BBone, successes_BBone, failures_BBone = 0, 0, 0, 0, 0
+
+    for i in range(20, length):
+        total_sum = 0
+        for j in range(i-20, i):
+            total_sum += list_of_open_prices[j]
+        twenty_day_mean = total_sum/20
+
+        variance_sum = 0
+        for k in range(i-20, i):
+            variance_sum += list_of_open_prices[k] - twenty_day_mean
+        variance = variance_sum/20
+        standard_dev = math.sqrt(int(variance))
+
+        lower_band_val = twenty_day_mean - (2 * standard_dev)
+
+        curr_price = list_of_open_prices[i]
+
+        if curr_price < lower_band_val and curr_long_BBone == 0:
+            buy_price_BBone = curr_price
+            curr_long_BBone = 1
+        elif curr_price >= twenty_day_mean and curr_long_BBone == 1:
+            sell_price_BBone = curr_price
+            if sell_price_BBone > buy_price_BBone:
+                successes_BBone += 1
+            elif sell_price_BBone < buy_price_BBone:
+                failures_BBone += 1
+            curr_long_BBone = 0
+
+    all_BBone[stock_name] = ['instances evaluated: ' + str(length), 'success rate: ' +
+                             str(round(successes_BBone / (successes_BBone + failures_BBone) * 100, 2)) + '%']
+
 
 print('\nThe following are the backtesting results of 3 TSX stocks \nusing the '
       'SMA indicator.\nInterval: 60 mins\nTotal Period of Time: 2 year\n')
