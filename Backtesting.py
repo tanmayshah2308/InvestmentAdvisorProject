@@ -192,3 +192,7 @@ for item in all_EMA:
 print('\nWMA')
 for item in all_WMA:
     print(item +':', all_WMA[item])
+
+print('\nBB-One')
+for item in all_BBone:
+    print(item + ':', all_BBone[item])
