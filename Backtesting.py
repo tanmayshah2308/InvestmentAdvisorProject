@@ -6,6 +6,7 @@ all_SMA = {}
 all_EMA = {}
 all_WMA = {}
 all_BBone = {}
+all_BBtwo = {}
 
 for stock_name in list_of_stocks:
     stock = yf.Ticker(stock_name)
@@ -178,6 +179,41 @@ for stock_name in list_of_stocks:
                              str(round(successes_BBone / (successes_BBone + failures_BBone) * 100, 2)) + '%']
 
 
+    # Bollinger Bands Strategy 2: Same as above except sell when stock goes past resistance (upper band)
+
+    curr_long_BBtwo, buy_price_BBtwo, sell_price_BBtwo, successes_BBtwo, failures_BBtwo = 0, 0, 0, 0, 0
+
+    for i in range(20, length):
+        total_sum = 0
+        for j in range(i-20, i):
+            total_sum += list_of_open_prices[j]
+        twenty_day_mean = total_sum/20
+
+        variance_sum = 0
+        for k in range(i-20, i):
+            variance_sum += (list_of_open_prices[k] - twenty_day_mean)**2
+        variance = variance_sum/20
+        standard_dev = math.sqrt(int(variance))
+        standard_dev_main = standard_dev
+
+        lower_band_val = twenty_day_mean - (2 * standard_dev)
+        upper_band_val = twenty_day_mean + (2 * standard_dev)
+        curr_price = list_of_open_prices[i]
+
+        if curr_price < lower_band_val and curr_long_BBtwo == 0:
+            buy_price_BBtwo = curr_price
+            curr_long_BBtwo = 1
+        elif curr_price >= upper_band_val and curr_long_BBtwo == 1:
+            sell_price_BBtwo = curr_price
+            if sell_price_BBtwo > buy_price_BBtwo:
+                successes_BBtwo += 1
+            elif sell_price_BBtwo < buy_price_BBtwo:
+                failures_BBtwo += 1
+            curr_long_BBtwo = 0
+
+    all_BBtwo[stock_name] = ['instances evaluated: ' + str(length), 'success rate: ' +
+                             str(round(successes_BBtwo / (successes_BBtwo + failures_BBtwo) * 100, 2)) + '%']
+
 print('\nThe following are the backtesting results of 3 TSX stocks \nusing the '
       'SMA indicator.\nInterval: 60 mins\nTotal Period of Time: 2 year\n')
 
@@ -196,3 +232,7 @@ for item in all_WMA:
 print('\nBB-One')
 for item in all_BBone:
     print(item + ':', all_BBone[item])
+
+print('\nBB-Two')
+for item in all_BBtwo:
+    print(item + ':', all_BBtwo[item])
