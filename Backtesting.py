@@ -7,6 +7,8 @@ all_EMA = {}
 all_WMA = {}
 all_BBone = {}
 all_BBtwo = {}
+all_MACDOne = {}
+all_MACDTwo = {}
 
 for stock_name in list_of_stocks:
     stock = yf.Ticker(stock_name)
@@ -214,6 +216,88 @@ for stock_name in list_of_stocks:
     all_BBtwo[stock_name] = ['instances evaluated: ' + str(length), 'success rate: ' +
                              str(round(successes_BBtwo / (successes_BBtwo + failures_BBtwo) * 100, 2)) + '%']
 
+
+    # MACD is the first oscillator I will consider. It tracks momentum using EMA. The first strategy involves finding when
+    # the MACD line crosses the centerline (0), and the second strategy is finding when the MACD crosses the signal line,
+    # the 9 day EMA of the MACD itself.
+
+    # Strategy 1: MACD = 12 day EMA - 26 day EMA
+    # Calculate 26 day SMA as the prevEMA of the first day
+    total = 0
+    for i in range(26):
+        total += list_of_open_prices[i]
+    prev_twenty_six_dayEMA = total/26
+
+    # Calculate 12 day SMA as the prev EMA for the first day
+    total = 0
+    for j in range(14, 26):
+        total += list_of_open_prices[j]
+    prev_twelve_dayEMA = total/12
+
+    # find the soothing average/multiplier
+    twelve_day_soothing_average = 2/13
+    twenty_six_day_soothing_average = 2/27
+
+    curr_long_MACDOne, buy_price_MACDOne, sell_price_MACDOne, successes_MACDOne, failures_MACDOne = 0, 0, 0, 0, 0
+    curr_long_MACDTwo, buy_price_MACDTwo, sell_price_MACDTwo, successes_MACDTwo, failures_MACDTwo = 0, 0, 0, 0, 0
+    total_gain_loss = 0
+    num_trades = 0
+
+    #for second strategy
+    nine_day_MACD_hist = []
+
+    # We can combine the strategies so we don't have to repeat the same code unnecessarily
+    for i in range(26, length):
+        curr_price = list_of_open_prices[i]
+        curr_twenty_six_dayEMA = (twenty_six_day_soothing_average * (curr_price - prev_twenty_six_dayEMA)) + prev_twenty_six_dayEMA
+        curr_twelve_day_EMA = (twelve_day_soothing_average * (curr_price - prev_twelve_dayEMA)) + prev_twelve_dayEMA
+        curr_MACD = curr_twelve_day_EMA - curr_twenty_six_dayEMA
+
+        # First Strategy: Centerline Crossover
+
+        if curr_MACD > 0 and curr_long_MACDOne == 0:
+            buy_price_MACDOne = curr_price
+            curr_long_MACDOne = 1
+        elif curr_MACD < 0 and curr_long_MACDOne == 1:
+            sell_price_MACDOne = curr_price
+            total_gain_loss += sell_price_MACDOne - buy_price_MACDOne
+            num_trades += 1
+            if sell_price_MACDOne > buy_price_MACDOne:
+                successes_MACDOne += 1
+            else:
+                failures_MACDOne += 1
+            curr_long_MACDOne = 0
+
+        # update the prev EMA
+        prev_twenty_six_dayEMA = curr_twenty_six_dayEMA
+        prev_twelve_dayEMA = curr_twelve_day_EMA
+
+        # Second Strategy: 9 Day EMA crossover
+        # Collect the first 9 MACD's to get the prev_nine_day_EMA. Then compare if the MACD crosses it.
+        if i < 35:
+            nine_day_MACD_hist.append(curr_MACD)
+        elif i >= 35:
+            prev_nine_day_EMA_of_MACD = sum(nine_day_MACD_hist)/9
+            if curr_MACD > prev_nine_day_EMA_of_MACD and curr_long_MACDTwo == 0:
+                buy_price_MACDTwo = curr_price
+                curr_long_MACDTwo = 1
+            elif curr_MACD < prev_nine_day_EMA_of_MACD and curr_long_MACDTwo == 1:
+                sell_price_MACDTwo = curr_price
+                curr_long_MACDTwo = 0
+                if sell_price_MACDTwo > buy_price_MACDTwo:
+                    successes_MACDTwo += 1
+                else:
+                    failures_MACDTwo += 1
+            nine_day_MACD_hist.pop(0)
+            nine_day_MACD_hist.append(curr_MACD)
+
+    all_MACDOne[stock_name] = ['instances evaluated: ' + str(length), 'success rate: ' +
+                               str(round(successes_MACDOne / (successes_MACDOne + failures_MACDOne) * 100, 2)) + '%']
+
+    all_MACDTwo[stock_name] = ['instances evaluated: ' + str(length), 'success rate: ' +
+                               str(round(successes_MACDTwo / (successes_MACDTwo + failures_MACDTwo) * 100, 2)) + '%']
+    #print(total_gain_loss/num_trades)
+
 print('\nThe following are the backtesting results of 3 TSX stocks \nusing the '
       'SMA indicator.\nInterval: 60 mins\nTotal Period of Time: 2 year\n')
 
@@ -236,3 +320,11 @@ for item in all_BBone:
 print('\nBB-Two')
 for item in all_BBtwo:
     print(item + ':', all_BBtwo[item])
+
+print('\nMACD-One')
+for item in all_MACDOne:
+    print(item + ':', all_MACDOne[item])
+
+print('\nMACD-Two')
+for item in all_MACDTwo:
+    print(item + ':', all_MACDTwo[item])
